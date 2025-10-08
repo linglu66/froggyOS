@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swimming Tank - Interactive Frog Explorer</title>
+    <meta name="description" content="Watch your frog swim through an underwater world of floating file folders using Three.js">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading">
+        <h2>Preparing your frog for swimming...</h2>
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="container">
+
+        <!-- Crosshair -->
+        <div id="crosshair"></div>
+        
+        <!-- Controls Display -->
+        <div id="controls">
+            <div class="control-item"><strong>M:</strong> Toggle Multi-Frog Mode</div>
+            <div class="control-item"><strong>B:</strong> Debug Scene State</div>
+        </div>
+    </div>
+
+    <!-- Import map to resolve "three" package -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/"
+        }
+    }
+    </script>
+    
+    <!-- Scripts -->
+    <script type="module" src="swimming-tank.js"></script>
+</body>
+</html>

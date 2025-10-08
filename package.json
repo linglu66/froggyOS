@@ -1,0 +1,17 @@
+{
+  "name": "frog-swimming-tank",
+  "version": "1.0.0",
+  "description": "A Three.js-based underwater swimming simulation where you control a frog swimming through floating file folders in third-person view.",
+  "main": "swimming-tank.js",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "start": "python3 -m http.server 8000",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.179.1"
+  }
+}
