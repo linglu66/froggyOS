@@ -78,6 +78,12 @@ class SwimmingTank {
                 worldHeight: 20,        // Even smaller vertical space
                 collisionDistance: 2.0, // Further reduced collision area
                 selectionDistance: 4.0, // Distance for folder selection highlight
+            },
+            tank: {
+                width: 50,              // Half-width of tank (actual width = 2x)
+                height: 20,             // Vertical swim space
+                floorY: -60,            // Sand floor Y position
+                ceilingY: 15,           // Maximum swim height
             }
         };
 
@@ -271,6 +277,8 @@ class SwimmingTank {
             console.log('✅ Controls setup');
             this.setupEventListeners();
             console.log('✅ Event listeners setup');
+            this.setupLightPanel();
+            console.log('✅ Light panel setup');
             this.startAnimation();
             console.log('✅ Animation started');
             // Note: Loading screen will be hidden after frog loads successfully
@@ -302,8 +310,10 @@ class SwimmingTank {
             powerPreference: "high-performance"
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor(0x4477aa); // Much brighter background - changed from 0x224466
-        this.renderer.fog = new THREE.Fog(0x4477aa, 15, 80); // Stronger fog for better seafloor depth effect
+        this.renderer.setClearColor(0x4477aa); // Bright underwater blue background
+
+        // Underwater fog effect (on scene, not renderer)
+        this.scene.fog = new THREE.Fog(0x4477aa, 15, 80);
         
         // Enable smooth shading for better rounded appearance
         this.renderer.shadowMap.enabled = true;
@@ -324,24 +334,25 @@ class SwimmingTank {
      */
     createEnvironment() {
         // Lighting setup - much brighter for better visibility
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Increased from 0.8 to 1.2
-        this.scene.add(ambientLight);
+        // Store references for config panel
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        this.scene.add(this.ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.4); // Increased from 0.9 to 1.4
-        directionalLight.position.set(10, 20, 5);
-        directionalLight.castShadow = true;
-        this.scene.add(directionalLight);
+        this.mainLight = new THREE.DirectionalLight(0xffffff, 1.4);
+        this.mainLight.position.set(10, 20, 5);
+        this.mainLight.castShadow = true;
+        this.scene.add(this.mainLight);
 
         // Add a brighter blue underwater tint for better atmosphere
-        const underwaterLight = new THREE.DirectionalLight(0x88ccff, 0.4); // Increased from 0.2 to 0.4, brighter blue
-        underwaterLight.position.set(-5, 10, -10);
-        this.scene.add(underwaterLight);
+        this.underwaterLight = new THREE.DirectionalLight(0x88ccff, 0.4);
+        this.underwaterLight.position.set(-5, 10, -10);
+        this.scene.add(this.underwaterLight);
 
         // Add additional bright overhead light for better folder visibility
-        const overheadLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        overheadLight.position.set(0, 25, 0);
-        overheadLight.castShadow = true;
-        this.scene.add(overheadLight);
+        this.overheadLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        this.overheadLight.position.set(0, 25, 0);
+        this.overheadLight.castShadow = true;
+        this.scene.add(this.overheadLight);
 
         // Create water caustics lighting effects
         this.createWaterCaustics();
@@ -780,6 +791,78 @@ class SwimmingTank {
     }
 
     /**
+     * Create a realistic bubble material with fresnel effect (edges visible, center transparent)
+     * Real bubbles are thin membranes - you see the rim more than the center
+     */
+    createBubbleMaterial(options = {}) {
+        const {
+            baseOpacity = 0.15,
+            rimOpacity = 0.7,
+            rimPower = 2.0,
+            color = new THREE.Color(0xaaddff),
+            emissiveColor = new THREE.Color(0x003344)
+        } = options;
+
+        const bubbleMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                baseOpacity: { value: baseOpacity },
+                rimOpacity: { value: rimOpacity },
+                rimPower: { value: rimPower },
+                bubbleColor: { value: color },
+                emissiveColor: { value: emissiveColor },
+                time: { value: 0.0 }
+            },
+            vertexShader: `
+                varying vec3 vNormal;
+                varying vec3 vViewPosition;
+
+                void main() {
+                    vNormal = normalize(normalMatrix * normal);
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    vViewPosition = -mvPosition.xyz;
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `,
+            fragmentShader: `
+                uniform float baseOpacity;
+                uniform float rimOpacity;
+                uniform float rimPower;
+                uniform vec3 bubbleColor;
+                uniform vec3 emissiveColor;
+                uniform float time;
+
+                varying vec3 vNormal;
+                varying vec3 vViewPosition;
+
+                void main() {
+                    // Calculate fresnel effect - edges are more visible than center
+                    vec3 viewDir = normalize(vViewPosition);
+                    float fresnel = 1.0 - abs(dot(viewDir, vNormal));
+                    fresnel = pow(fresnel, rimPower);
+
+                    // Combine base transparency with fresnel rim
+                    float alpha = mix(baseOpacity, rimOpacity, fresnel);
+
+                    // Add subtle specular highlight
+                    vec3 lightDir = normalize(vec3(0.5, 1.0, 0.3));
+                    float specular = pow(max(dot(reflect(-lightDir, vNormal), viewDir), 0.0), 32.0);
+
+                    // Final color with emissive glow and specular
+                    vec3 finalColor = bubbleColor + emissiveColor * 0.3 + vec3(1.0) * specular * 0.5;
+
+                    gl_FragColor = vec4(finalColor, alpha);
+                }
+            `,
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            blending: THREE.NormalBlending
+        });
+
+        return bubbleMaterial;
+    }
+
+    /**
      * Create vertical bubble streams for each object to help with depth perception
      */
     createObjectBubbleStreams() {
@@ -831,30 +914,26 @@ class SwimmingTank {
      */
     createStreamBubble(folderIndex, bubbleIndex) {
         // Create bubble geometry with varying sizes
-        const bubbleSize = 0.04 + Math.random() * 0.06; // 0.04 to 0.10 - larger for better visibility
-        const bubbleGeometry = new THREE.SphereGeometry(bubbleSize, 16, 12); // Higher quality for better appearance
-        
-        // Create glassy bubble material with better visibility
-        const bubbleMaterial = new THREE.MeshPhongMaterial({
-            color: 0xFFFFFF,
-            transparent: true,
-            opacity: 0.8 + Math.random() * 0.2, // Increased from 0.6-0.9 to 0.8-1.0 for much better visibility
-            shininess: 100,
-            specular: 0xFFFFFF,
-            emissive: 0x004466, // Increased emissive for better underwater visibility
-            side: THREE.DoubleSide
-        });
-        
-        const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
-        
+        const bubbleSize = 0.04 + Math.random() * 0.06; // 0.04 to 0.10
+        const bubbleGeometry = new THREE.SphereGeometry(bubbleSize, 16, 12);
+
         // Add subtle color variation based on folder index for better identification
         const hue = (folderIndex * 137.5) % 360; // Golden angle for good distribution
-        const saturation = 30 + Math.random() * 40; // 30-70% - more saturated for visibility
-        const lightness = 60 + Math.random() * 30; // 60-90% - better contrast
-        
-        // Convert HSL to RGB for subtle tinting
+        const saturation = 40 + Math.random() * 30; // 40-70%
+        const lightness = 70 + Math.random() * 20; // 70-90%
         const color = new THREE.Color().setHSL(hue / 360, saturation / 100, lightness / 100);
-        bubbleMaterial.color.copy(color);
+
+        // Create fresnel bubble material - thin membrane with visible edges
+        // Stream bubbles need higher visibility since they're further from camera
+        const bubbleMaterial = this.createBubbleMaterial({
+            baseOpacity: 0.15 + Math.random() * 0.1,   // More visible center for streams
+            rimOpacity: 0.7 + Math.random() * 0.25,    // Strong visible rim
+            rimPower: 1.2 + Math.random() * 0.5,       // Softer falloff for better visibility
+            color: color,
+            emissiveColor: new THREE.Color(0x004455)   // Brighter emissive
+        });
+
+        const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
         
         return bubble;
     }
@@ -884,11 +963,17 @@ class SwimmingTank {
                     bubble.position.x = 0;
                     bubble.position.z = 0;
                 }
-                
+
                 // Fade bubble based on height (more transparent when higher)
                 const heightRatio = (bubble.position.y - data.startY) / (15 - data.startY);
-                bubble.material.opacity = (0.4 + Math.random() * 0.3) * (1 - heightRatio * 0.5);
-                
+                const fadeFactor = (1 - heightRatio * 0.6);
+
+                // Update shader uniforms for fresnel material
+                if (bubble.material.uniforms) {
+                    bubble.material.uniforms.rimOpacity.value = (0.7 + Math.random() * 0.2) * fadeFactor;
+                    bubble.material.uniforms.baseOpacity.value = 0.15 * fadeFactor;
+                }
+
                 // Scale bubble slightly as it rises
                 const scale = 1.0 + heightRatio * 0.3;
                 bubble.scale.setScalar(scale);
@@ -1560,6 +1645,10 @@ class SwimmingTank {
                     // Debug: Print scene state
                     this.debugSceneState();
                     break;
+                case 'KeyL':
+                    // Toggle light config panel
+                    this.toggleLightPanel();
+                    break;
             }
         };
 
@@ -1618,7 +1707,7 @@ class SwimmingTank {
     createAdditionalFrogs() {
         if (!this.multiFrogMode) return;
         
-        // Load the frog model 5 times independently (like folders)
+        // Load the frog model 5 times for multi-frog mode
         for (let i = 0; i < 5; i++) {
             this.loader.load('./Frog_Swim.gltf', (gltf) => {
                 const otherFrog = gltf.scene;
@@ -1634,88 +1723,34 @@ class SwimmingTank {
                 // Ensure the frog is visible
                 otherFrog.visible = true;
                 
-                // Random position within the swimming area with much better spacing
+                // Scale the same as main frog (scale 2) - DO THIS FIRST before positioning
+                otherFrog.scale.setScalar(2);
+                
+                // Calculate bounding box BEFORE positioning to get true local dimensions
+                // Position at origin first
+                otherFrog.position.set(0, 0, 0);
+                
+                const bbox = new THREE.Box3().setFromObject(otherFrog);
+                const bboxHeight = bbox.max.y - bbox.min.y;
+                const bboxCenter = new THREE.Vector3();
+                bbox.getCenter(bboxCenter);
+                
+                // These are the local coordinates relative to the frog's origin (0,0,0)
+                const localTop = bbox.max.y;
+                const localBottom = bbox.min.y;
+                const localCenter = bboxCenter.y;
+                
+                // NOW position the frog in world space - closer together
                 const angle = (i / 5) * Math.PI * 2; // Evenly spaced around circle
-                const radius = 35 + i * 12; // Much larger radius for each frog (35, 47, 59, 71, 83)
+                const radius = 18 + i * 6; // Closer spacing (18, 24, 30, 36, 42)
                 const x = Math.cos(angle) * radius;
-                const y = 15 + i * 4; // Different heights (15, 19, 23, 27, 31)
+                const y = 10 + i * 3; // Different heights (10, 13, 16, 19, 22)
                 const z = Math.sin(angle) * radius;
                 
                 otherFrog.position.set(x, y, z);
                 otherFrog.rotation.y = Math.random() * Math.PI * 2; // Random rotation
                 otherFrog.userData.isFrog = true;
                 otherFrog.userData.frogIndex = i;
-                
-                console.log(`Frog ${i} (${this.frogNames[i]}) positioned at:`, x, y, z);
-                console.log(`Frog ${i} children count:`, otherFrog.children.length);
-                console.log(`Frog ${i} visible:`, otherFrog.visible);
-                
-                // Debug: Check if frog has any meshes
-                let meshCount = 0;
-                otherFrog.traverse((child) => {
-                    if (child.isMesh) {
-                        meshCount++;
-                        console.log(`  Mesh ${meshCount}: visible=${child.visible}, material=${child.material ? 'exists' : 'missing'}`);
-                    }
-                });
-                console.log(`Frog ${i} total meshes:`, meshCount);
-                
-                // Create a colored debug sphere at this position
-                const debugSphere = new THREE.Mesh(
-                    new THREE.SphereGeometry(2, 8, 6),
-                    new THREE.MeshBasicMaterial({ 
-                        color: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff][i],
-                        wireframe: true,
-                        transparent: true,
-                        opacity: 0.8
-                    })
-                );
-                debugSphere.position.set(x, y, z);
-                debugSphere.userData.isDebugSphere = true;
-                this.scene.add(debugSphere);
-                
-                // Create a simple test cube to verify positioning
-                const testCube = new THREE.Mesh(
-                    new THREE.BoxGeometry(1, 1, 1),
-                    new THREE.MeshBasicMaterial({ 
-                        color: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff][i],
-                        transparent: true,
-                        opacity: 0.5
-                    })
-                );
-                testCube.position.set(x, y, z);
-                testCube.userData.isTestCube = true;
-                this.scene.add(testCube);
-                
-                // Scale the same as main frog (scale 2)
-                otherFrog.scale.setScalar(2);
-                
-                // TEMPORARY: Create a simple placeholder frog to test positioning
-                const placeholderFrog = new THREE.Mesh(
-                    new THREE.SphereGeometry(1, 8, 6),
-                    new THREE.MeshBasicMaterial({ 
-                        color: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff][i],
-                        transparent: true,
-                        opacity: 0.8
-                    })
-                );
-                placeholderFrog.position.set(x, y, z);
-                placeholderFrog.userData.isPlaceholderFrog = true;
-                placeholderFrog.userData.frogIndex = i;
-                this.scene.add(placeholderFrog);
-                
-                // Create a simple box to test if the issue is with the frog model
-                const testBox = new THREE.Mesh(
-                    new THREE.BoxGeometry(2, 2, 2),
-                    new THREE.MeshBasicMaterial({ 
-                        color: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff][i],
-                        wireframe: false
-                    })
-                );
-                testBox.position.set(x, y + 3, z); // Slightly above the frog
-                testBox.userData.isTestBox = true;
-                testBox.userData.frogIndex = i;
-                this.scene.add(testBox);
                 
                 // Add animation mixer for swimming animation (exactly like main frog)
                 const mixer = new THREE.AnimationMixer(otherFrog);
@@ -1724,23 +1759,28 @@ class SwimmingTank {
                     swimAction.play();
                 }
                 
-                // Create name label
+                // Create name label positioned just above the actual top of the frog
                 const nameLabel = this.createFrogNameLabel(this.frogNames[i]);
-                nameLabel.position.set(0, 8, 0); // Above the frog
+                nameLabel.position.set(0, localTop - 0.5, 0); // Just above the top
                 otherFrog.add(nameLabel);
                 
                 console.log(`Added frog ${i} to scene at position:`, otherFrog.position);
                 
                 // Store frog data
+                // IMPORTANT: Use mesh.position directly as reference, don't create separate position!
                 const frogData = {
                     mesh: otherFrog,
                     mixer: mixer,
                     name: this.frogNames[i],
                     nameLabel: nameLabel,
-                    position: new THREE.Vector3(x, y, z),
+                    position: otherFrog.position, // Use mesh position directly (reference, not copy!)
                     velocity: new THREE.Vector3(),
+                    acceleration: new THREE.Vector3(), // For steering behaviors
                     target: null, // Will be set when folder is selected
                     speed: 3.0 + Math.random() * 2.0, // Random speed between 3-5
+                    maxForce: 2.0, // Maximum steering force
+                    separationRadius: 4.0, // Distance to start avoiding other frogs
+                    minSeparation: 1.5, // Minimum safe distance - hard boundary (just prevent overlap)
                     isMoving: false
                 };
                 
@@ -1748,22 +1788,6 @@ class SwimmingTank {
                 this.scene.add(otherFrog);
                 
                 console.log(`Frog ${i} added to scene. Total frogs in scene:`, this.scene.children.filter(child => child.userData.isFrog).length);
-                
-                // Add a debug sphere at the main frog's position (only for the first frog)
-                if (i === 0) {
-                    const mainFrogDebugSphere = new THREE.Mesh(
-                        new THREE.SphereGeometry(3, 8, 6),
-                        new THREE.MeshBasicMaterial({ 
-                            color: 0xffffff,
-                            wireframe: true,
-                            transparent: true,
-                            opacity: 0.9
-                        })
-                    );
-                    mainFrogDebugSphere.position.copy(this.frog.position);
-                    mainFrogDebugSphere.userData.isMainFrogDebug = true;
-                    this.scene.add(mainFrogDebugSphere);
-                }
                 
                 // Log completion for this frog
                 console.log(`🐸 Frog ${i} (${this.frogNames[i]}) created and added to scene!`);
@@ -1813,10 +1837,8 @@ class SwimmingTank {
     updateAdditionalFrogs(delta) {
         if (!this.multiFrogMode) return;
         
-        // Debug: Log frog count every 60 frames
-        if (Math.floor(Date.now() / 1000) % 2 === 0) {
-            console.log(`Updating ${this.otherFrogs.length} frogs`);
-        }
+        // Debug: Check for overlapping frogs every frame
+        this.checkAndLogOverlaps();
         
         this.otherFrogs.forEach((frogData, index) => {
             // Update animation mixer
@@ -1835,44 +1857,221 @@ class SwimmingTank {
             }
         });
     }
+    
+    /**
+     * Check and log when frogs are overlapping
+     */
+    checkAndLogOverlaps() {
+        // Only log every 30 frames to avoid spam
+        if (!this.overlapCheckFrame) this.overlapCheckFrame = 0;
+        this.overlapCheckFrame++;
+        if (this.overlapCheckFrame % 30 !== 0) return;
+        
+        let overlappingPairs = [];
+        
+        // Check each frog pair
+        for (let i = 0; i < this.otherFrogs.length; i++) {
+            const frogA = this.otherFrogs[i];
+            
+            // Check against player
+            const distToPlayer = frogA.position.distanceTo(this.frogPosition);
+            if (distToPlayer < frogA.minSeparation) {
+                overlappingPairs.push(`${frogA.name} <-> Player (dist: ${distToPlayer.toFixed(2)})`);
+            }
+            
+            // Check against other frogs
+            for (let j = i + 1; j < this.otherFrogs.length; j++) {
+                const frogB = this.otherFrogs[j];
+                const distance = frogA.position.distanceTo(frogB.position);
+                
+                if (distance < frogA.minSeparation) {
+                    overlappingPairs.push(`${frogA.name} <-> ${frogB.name} (dist: ${distance.toFixed(2)})`);
+                }
+            }
+        }
+        
+        if (overlappingPairs.length > 0) {
+            console.warn('⚠️ FROGS OVERLAPPING:', overlappingPairs);
+        }
+    }
 
     /**
-     * Update individual frog movement towards target
+     * Update individual frog movement towards target using steering behaviors
      */
     updateFrogMovement(frogData, delta) {
         if (!frogData.target) return;
         
-        const targetPosition = frogData.target.position;
-        const currentPosition = frogData.position;
+        // Check if too close to any frog - if so, ONLY do separation
+        const tooClose = this.checkMinimumSeparation(frogData);
         
-        // Calculate direction to target
-        const direction = new THREE.Vector3()
-            .subVectors(targetPosition, currentPosition)
-            .normalize();
+        // Reset acceleration
+        frogData.acceleration.set(0, 0, 0);
         
-        // Move towards target
-        const moveDistance = frogData.speed * delta;
-        const newPosition = currentPosition.clone().add(
-            direction.multiplyScalar(moveDistance)
-        );
+        if (tooClose) {
+            // EMERGENCY: Only separate, don't seek target
+            const separationForce = this.calculateSeparation(frogData);
+            separationForce.multiplyScalar(1.5); // Gentle emergency separation
+            frogData.acceleration.add(separationForce);
+        } else {
+            // Normal movement: seek target and maintain separation
+
+            // 1. SEEK BEHAVIOR - Move towards target
+            const seekForce = this.calculateSeek(frogData, frogData.target.position);
+            seekForce.multiplyScalar(1.0); // Seek weight
+            frogData.acceleration.add(seekForce);
+
+            // 2. SEPARATION BEHAVIOR - Avoid other frogs
+            const separationForce = this.calculateSeparation(frogData);
+            separationForce.multiplyScalar(0.8); // Light separation, allow close proximity
+            frogData.acceleration.add(separationForce);
+        }
         
-        // Check if reached target (within 2 units)
-        const distanceToTarget = currentPosition.distanceTo(targetPosition);
-        if (distanceToTarget < 2.0) {
+        // 3. Apply acceleration to velocity
+        frogData.velocity.add(frogData.acceleration.multiplyScalar(delta));
+        
+        // Limit velocity to max speed
+        if (frogData.velocity.length() > frogData.speed) {
+            frogData.velocity.normalize().multiplyScalar(frogData.speed);
+        }
+        
+        // 4. Update position
+        const displacement = frogData.velocity.clone().multiplyScalar(delta);
+        const newPosition = frogData.position.clone().add(displacement);
+        
+        // 5. Verify new position doesn't cause overlap
+        if (!this.wouldCauseOverlap(frogData, newPosition)) {
+            // frogData.position is a reference to mesh.position, so updating it updates the mesh
+            frogData.position.copy(newPosition);
+        } else {
+            // Position would cause overlap - don't move, just slow down
+            frogData.velocity.multiplyScalar(0.5);
+        }
+        
+        // 6. Check if reached target (closer now that separation is reduced)
+        const distanceToTarget = frogData.position.distanceTo(frogData.target.position);
+        if (distanceToTarget < 5.0) {
             frogData.isMoving = false;
             frogData.target = null;
+            frogData.velocity.set(0, 0, 0); // Stop moving
             return;
         }
         
-        // Update position
-        frogData.position.copy(newPosition);
-        frogData.mesh.position.copy(newPosition);
-        
-        // Rotate to face movement direction
-        if (direction.length() > 0) {
-            const angle = Math.atan2(direction.x, direction.z);
+        // 7. Rotate to face movement direction
+        if (frogData.velocity.length() > 0.1) {
+            const angle = Math.atan2(frogData.velocity.x, frogData.velocity.z);
             frogData.mesh.rotation.y = angle;
         }
+    }
+    
+    /**
+     * Check if frog is too close to another frog (below minimum safe distance)
+     */
+    checkMinimumSeparation(frogData) {
+        // Check distance to player frog
+        if (frogData.position.distanceTo(this.frogPosition) < frogData.minSeparation) {
+            return true;
+        }
+        
+        // Check distance to other frogs
+        for (const otherFrog of this.otherFrogs) {
+            if (otherFrog === frogData) continue;
+            if (frogData.position.distanceTo(otherFrog.position) < frogData.minSeparation) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Check if a new position would cause overlap with other frogs
+     */
+    wouldCauseOverlap(frogData, newPosition) {
+        const minDistance = frogData.minSeparation;
+        
+        // Check against player frog
+        if (newPosition.distanceTo(this.frogPosition) < minDistance) {
+            return true;
+        }
+        
+        // Check against other frogs
+        for (const otherFrog of this.otherFrogs) {
+            if (otherFrog === frogData) continue;
+            if (newPosition.distanceTo(otherFrog.position) < minDistance) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Calculate seek steering force towards a target
+     */
+    calculateSeek(frogData, targetPosition) {
+        const desired = new THREE.Vector3()
+            .subVectors(targetPosition, frogData.position)
+            .normalize()
+            .multiplyScalar(frogData.speed);
+        
+        const steer = new THREE.Vector3()
+            .subVectors(desired, frogData.velocity)
+            .clampLength(0, frogData.maxForce);
+        
+        return steer;
+    }
+    
+    /**
+     * Calculate separation steering force to avoid other frogs
+     * Uses inverse square law: force gets exponentially stronger as frogs get closer
+     */
+    calculateSeparation(frogData) {
+        const steer = new THREE.Vector3();
+        let count = 0;
+
+        // Check separation from player frog
+        const distanceToPlayer = frogData.position.distanceTo(this.frogPosition);
+        if (distanceToPlayer < frogData.separationRadius && distanceToPlayer > 0.01) {
+            // Linear falloff - gentler than inverse square
+            const repulsionStrength = 1.0 - (distanceToPlayer / frogData.separationRadius);
+
+            const diff = new THREE.Vector3()
+                .subVectors(frogData.position, this.frogPosition)
+                .normalize()
+                .multiplyScalar(repulsionStrength);
+            steer.add(diff);
+            count++;
+        }
+
+        // Check separation from other frogs
+        for (const otherFrog of this.otherFrogs) {
+            if (otherFrog === frogData) continue; // Skip self
+
+            const distance = frogData.position.distanceTo(otherFrog.position);
+            if (distance < frogData.separationRadius && distance > 0.01) {
+                // Linear falloff - gentler repulsion
+                const repulsionStrength = 1.0 - (distance / frogData.separationRadius);
+
+                const diff = new THREE.Vector3()
+                    .subVectors(frogData.position, otherFrog.position)
+                    .normalize()
+                    .multiplyScalar(repulsionStrength);
+                steer.add(diff);
+                count++;
+            }
+        }
+
+        // Average the steering force
+        if (count > 0) {
+            steer.divideScalar(count);
+            if (steer.length() > 0) {
+                steer.normalize().multiplyScalar(frogData.speed * 0.5); // Half speed for gentle avoidance
+                steer.sub(frogData.velocity);
+                steer.clampLength(0, frogData.maxForce); // Normal max force
+            }
+        }
+
+        return steer;
     }
 
     /**
@@ -2054,6 +2253,13 @@ class SwimmingTank {
 
         // Apply velocity to frog position
         this.frog.position.add(this.velocity.clone().multiplyScalar(delta));
+
+        // Clamp frog position to tank bounds
+        const tank = this.config.tank;
+        this.frog.position.x = Math.max(-tank.width, Math.min(tank.width, this.frog.position.x));
+        this.frog.position.z = Math.max(-tank.width, Math.min(tank.width, this.frog.position.z));
+        this.frog.position.y = Math.max(tank.floorY + 5, Math.min(tank.ceilingY, this.frog.position.y));
+
         this.frogPosition.copy(this.frog.position);
 
         // Handle rotation based on user input direction, not just velocity
@@ -2720,10 +2926,205 @@ class SwimmingTank {
     toggleDebugMode() {
         this.debugMode = !this.debugMode;
         console.log('Debug mode:', this.debugMode ? 'ON' : 'OFF');
-        
+
         if (!this.debugMode) {
             this.removeDebugVisualization();
         }
+    }
+
+    /**
+     * Toggle the lighting config panel
+     */
+    toggleLightPanel() {
+        const panel = document.getElementById('light-panel');
+        if (panel) {
+            panel.classList.toggle('hidden');
+        }
+    }
+
+    /**
+     * Setup the lighting config panel event listeners
+     */
+    setupLightPanel() {
+        const panel = document.getElementById('light-panel');
+        if (!panel) return;
+
+        // Close button
+        document.getElementById('close-light-panel')?.addEventListener('click', () => {
+            panel.classList.add('hidden');
+        });
+
+        // Helper to update value display
+        const updateDisplay = (id, value) => {
+            const display = document.getElementById(id + '-val');
+            if (display) display.textContent = value;
+        };
+
+        // Helper to create slider listener
+        const sliderListener = (id, callback) => {
+            const slider = document.getElementById(id);
+            if (slider) {
+                slider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    updateDisplay(id, value);
+                    callback(value);
+                });
+            }
+        };
+
+        // Helper to create color listener
+        const colorListener = (id, callback) => {
+            const picker = document.getElementById(id);
+            if (picker) {
+                picker.addEventListener('input', (e) => {
+                    callback(new THREE.Color(e.target.value));
+                });
+            }
+        };
+
+        // Ambient Light
+        sliderListener('ambient-intensity', (v) => { if (this.ambientLight) this.ambientLight.intensity = v; });
+        colorListener('ambient-color', (c) => { if (this.ambientLight) this.ambientLight.color.copy(c); });
+
+        // Main Directional Light
+        sliderListener('main-intensity', (v) => { if (this.mainLight) this.mainLight.intensity = v; });
+        colorListener('main-color', (c) => { if (this.mainLight) this.mainLight.color.copy(c); });
+        sliderListener('main-pos-x', (v) => { if (this.mainLight) this.mainLight.position.x = v; });
+        sliderListener('main-pos-y', (v) => { if (this.mainLight) this.mainLight.position.y = v; });
+        sliderListener('main-pos-z', (v) => { if (this.mainLight) this.mainLight.position.z = v; });
+
+        // Underwater Light
+        sliderListener('underwater-intensity', (v) => { if (this.underwaterLight) this.underwaterLight.intensity = v; });
+        colorListener('underwater-color', (c) => { if (this.underwaterLight) this.underwaterLight.color.copy(c); });
+
+        // Overhead Light
+        sliderListener('overhead-intensity', (v) => { if (this.overheadLight) this.overheadLight.intensity = v; });
+        colorListener('overhead-color', (c) => { if (this.overheadLight) this.overheadLight.color.copy(c); });
+
+        // Caustic Lights
+        sliderListener('caustic-intensity', (v) => {
+            if (this.causticLights) {
+                this.causticLights.forEach(light => light.intensity = v);
+            }
+        });
+        colorListener('caustic-color', (c) => {
+            if (this.causticLights) {
+                this.causticLights.forEach(light => light.color.copy(c));
+            }
+        });
+
+        // Tank dimension controls
+        sliderListener('tank-width', (v) => {
+            this.config.tank.width = v;
+        });
+        sliderListener('tank-height', (v) => {
+            this.config.tank.height = v;
+            // Update ceiling based on height (centered around y=0)
+            this.config.tank.ceilingY = v * 0.75;
+        });
+        sliderListener('tank-floor', (v) => {
+            this.config.tank.floorY = v;
+            if (this.sandFloor) this.sandFloor.position.y = v;
+        });
+        sliderListener('tank-ceiling', (v) => {
+            this.config.tank.ceilingY = v;
+        });
+
+        // Fog controls
+        sliderListener('fog-near', (v) => {
+            if (this.scene.fog) this.scene.fog.near = v;
+        });
+        sliderListener('fog-far', (v) => {
+            if (this.scene.fog) this.scene.fog.far = v;
+        });
+        colorListener('fog-color', (c) => {
+            if (this.scene.fog) this.scene.fog.color.copy(c);
+        });
+
+        // Reset button
+        document.getElementById('reset-lights')?.addEventListener('click', () => {
+            this.resetLightDefaults();
+        });
+    }
+
+    /**
+     * Reset all lights to default values
+     */
+    resetLightDefaults() {
+        // Reset light values
+        if (this.ambientLight) {
+            this.ambientLight.intensity = 1.2;
+            this.ambientLight.color.set(0xffffff);
+        }
+        if (this.mainLight) {
+            this.mainLight.intensity = 1.4;
+            this.mainLight.color.set(0xffffff);
+            this.mainLight.position.set(10, 20, 5);
+        }
+        if (this.underwaterLight) {
+            this.underwaterLight.intensity = 0.4;
+            this.underwaterLight.color.set(0x88ccff);
+        }
+        if (this.overheadLight) {
+            this.overheadLight.intensity = 0.8;
+            this.overheadLight.color.set(0xffffff);
+        }
+        if (this.causticLights) {
+            this.causticLights.forEach(light => {
+                light.intensity = 0.6;
+                light.color.set(0x44aaff);
+            });
+        }
+        if (this.scene.fog) {
+            this.scene.fog.near = 15;
+            this.scene.fog.far = 80;
+            this.scene.fog.color.set(0x4477aa);
+        }
+
+        // Reset tank dimensions
+        this.config.tank.width = 50;
+        this.config.tank.height = 20;
+        this.config.tank.floorY = -60;
+        this.config.tank.ceilingY = 15;
+        if (this.sandFloor) this.sandFloor.position.y = -60;
+
+        // Reset UI controls
+        const defaults = {
+            'ambient-intensity': 1.2,
+            'ambient-color': '#ffffff',
+            'main-intensity': 1.4,
+            'main-color': '#ffffff',
+            'main-pos-x': 10,
+            'main-pos-y': 20,
+            'main-pos-z': 5,
+            'underwater-intensity': 0.4,
+            'underwater-color': '#88ccff',
+            'overhead-intensity': 0.8,
+            'overhead-color': '#ffffff',
+            'caustic-intensity': 0.6,
+            'caustic-color': '#44aaff',
+            'fog-near': 15,
+            'fog-far': 80,
+            'fog-color': '#4477aa',
+            'tank-width': 50,
+            'tank-height': 20,
+            'tank-floor': -60,
+            'tank-ceiling': 15
+        };
+
+        for (const [id, value] of Object.entries(defaults)) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.value = value;
+                // Update value display for sliders
+                const display = document.getElementById(id + '-val');
+                if (display && typeof value === 'number') {
+                    display.textContent = value;
+                }
+            }
+        }
+
+        console.log('Lights reset to defaults');
     }
 
     /**
@@ -2797,20 +3198,17 @@ class SwimmingTank {
             
             // Create larger, more dramatic bubbles with high-quality geometry
             const bubbleSize = 0.08 + Math.random() * 0.08;
-            const bubbleGeometry = new THREE.SphereGeometry(bubbleSize, 20, 16); // Higher quality for dash bubbles
-            
-            // Create glassy dash bubble material with enhanced properties
-            const bubbleMaterial = new THREE.MeshPhongMaterial({
-                color: 0xFFFFFF, // Pure white for glassy appearance
-                transparent: true,
-                opacity: 0.4 + Math.random() * 0.3, // More transparent for glass effect
-                shininess: 120, // Very high shininess for glass-like reflections
-                specular: 0xFFFFFF, // White specular highlights
-                emissive: 0x002244, // Subtle blue underwater tint
-                side: THREE.DoubleSide, // Render both sides for transparency
-                reflectivity: 0.3 // Add some reflectivity for glass effect
+            const bubbleGeometry = new THREE.SphereGeometry(bubbleSize, 20, 16);
+
+            // Create fresnel bubble material - larger dash bubbles with more visible rims
+            const bubbleMaterial = this.createBubbleMaterial({
+                baseOpacity: 0.05 + Math.random() * 0.05,  // Transparent center
+                rimOpacity: 0.6 + Math.random() * 0.3,     // More visible rim for dash effect
+                rimPower: 1.5 + Math.random() * 0.5,       // Softer falloff for larger bubbles
+                color: new THREE.Color(0xddeeff),          // Slightly whiter for dash
+                emissiveColor: new THREE.Color(0x002244)
             });
-            
+
             const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
             bubble.position.copy(bubblePosition);
             
@@ -2861,19 +3259,17 @@ class SwimmingTank {
             
             // Create realistic bubble geometry with more segments for smoothness
             const bubbleSize = 0.05 + Math.random() * 0.05; // Random size
-            const bubbleGeometry = new THREE.SphereGeometry(bubbleSize, 16, 12); // Higher segment count for smoothness
-            
-            // Create glassy bubble material with realistic properties
-            const bubbleMaterial = new THREE.MeshPhongMaterial({
-                color: 0xFFFFFF, // Pure white for glassy appearance
-                transparent: true,
-                opacity: 0.3 + Math.random() * 0.2, // More transparent for glass effect
-                shininess: 100, // High shininess for glass-like reflections
-                specular: 0xFFFFFF, // White specular highlights
-                emissive: 0x001122, // Subtle blue underwater tint
-                side: THREE.DoubleSide // Render both sides for transparency
+            const bubbleGeometry = new THREE.SphereGeometry(bubbleSize, 16, 12);
+
+            // Create fresnel bubble material - thin membrane with visible edges
+            const bubbleMaterial = this.createBubbleMaterial({
+                baseOpacity: 0.03 + Math.random() * 0.05,  // Very transparent center
+                rimOpacity: 0.4 + Math.random() * 0.3,     // Visible rim
+                rimPower: 1.8 + Math.random() * 0.8,       // Rim sharpness
+                color: new THREE.Color(0xcceeFF),          // Light blue tint
+                emissiveColor: new THREE.Color(0x001122)
             });
-            
+
             const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
             bubble.position.copy(bubblePosition);
             
@@ -2929,11 +3325,23 @@ class SwimmingTank {
             
             // Reduce bubble life
             data.life -= delta;
-            
-            // Fade out bubble as it ages with realistic glass effect
+
+            // Fade out bubble as it ages
             const fadeRatio = data.life / data.maxLife;
-            bubble.material.opacity = fadeRatio * 0.4; // More transparent for glass effect
-            
+
+            // Update shader uniforms for fresnel material
+            if (bubble.material.uniforms) {
+                // Fade rim opacity as bubble ages
+                bubble.material.uniforms.rimOpacity.value = fadeRatio * 0.6;
+                bubble.material.uniforms.baseOpacity.value = fadeRatio * 0.08;
+
+                // Shift color toward underwater tint as bubble ages
+                const underwaterTint = new THREE.Color(0x003344);
+                const baseColor = new THREE.Color(0xcceeFF);
+                const finalColor = baseColor.clone().lerp(underwaterTint, (1.0 - fadeRatio) * 0.4);
+                bubble.material.uniforms.bubbleColor.value.copy(finalColor);
+            }
+
             // Scale bubble slightly as it rises (realistic bubble expansion)
             const scale = 1.0 + (1.0 - fadeRatio) * 0.4;
             if (data.scale) {
@@ -2941,12 +3349,6 @@ class SwimmingTank {
             } else {
                 bubble.scale.setScalar(scale);
             }
-            
-            // Add subtle color shift for more realistic underwater effect
-            const underwaterTint = new THREE.Color(0x001122);
-            const baseColor = new THREE.Color(0xFFFFFF);
-            const finalColor = baseColor.lerp(underwaterTint, (1.0 - fadeRatio) * 0.3);
-            bubble.material.color.copy(finalColor);
             
             // Remove dead bubbles
             if (data.life <= 0) {

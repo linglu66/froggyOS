@@ -24,6 +24,140 @@
         <div id="controls">
             <div class="control-item"><strong>M:</strong> Toggle Multi-Frog Mode</div>
             <div class="control-item"><strong>B:</strong> Debug Scene State</div>
+            <div class="control-item"><strong>L:</strong> Toggle Light Panel</div>
+        </div>
+
+        <!-- Lighting Config Panel -->
+        <div id="light-panel" class="config-panel hidden">
+            <div class="panel-header">
+                <h3>Lighting Config</h3>
+                <button id="close-light-panel" class="close-btn">&times;</button>
+            </div>
+
+            <div class="panel-section">
+                <h4>Ambient Light</h4>
+                <div class="slider-row">
+                    <label>Intensity</label>
+                    <input type="range" id="ambient-intensity" min="0" max="3" step="0.1" value="1.2">
+                    <span class="value-display" id="ambient-intensity-val">1.2</span>
+                </div>
+                <div class="slider-row">
+                    <label>Color</label>
+                    <input type="color" id="ambient-color" value="#ffffff">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h4>Main Directional</h4>
+                <div class="slider-row">
+                    <label>Intensity</label>
+                    <input type="range" id="main-intensity" min="0" max="3" step="0.1" value="1.4">
+                    <span class="value-display" id="main-intensity-val">1.4</span>
+                </div>
+                <div class="slider-row">
+                    <label>Color</label>
+                    <input type="color" id="main-color" value="#ffffff">
+                </div>
+                <div class="slider-row">
+                    <label>Pos X</label>
+                    <input type="range" id="main-pos-x" min="-30" max="30" step="1" value="10">
+                    <span class="value-display" id="main-pos-x-val">10</span>
+                </div>
+                <div class="slider-row">
+                    <label>Pos Y</label>
+                    <input type="range" id="main-pos-y" min="0" max="50" step="1" value="20">
+                    <span class="value-display" id="main-pos-y-val">20</span>
+                </div>
+                <div class="slider-row">
+                    <label>Pos Z</label>
+                    <input type="range" id="main-pos-z" min="-30" max="30" step="1" value="5">
+                    <span class="value-display" id="main-pos-z-val">5</span>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h4>Underwater Light</h4>
+                <div class="slider-row">
+                    <label>Intensity</label>
+                    <input type="range" id="underwater-intensity" min="0" max="2" step="0.1" value="0.4">
+                    <span class="value-display" id="underwater-intensity-val">0.4</span>
+                </div>
+                <div class="slider-row">
+                    <label>Color</label>
+                    <input type="color" id="underwater-color" value="#88ccff">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h4>Overhead Light</h4>
+                <div class="slider-row">
+                    <label>Intensity</label>
+                    <input type="range" id="overhead-intensity" min="0" max="2" step="0.1" value="0.8">
+                    <span class="value-display" id="overhead-intensity-val">0.8</span>
+                </div>
+                <div class="slider-row">
+                    <label>Color</label>
+                    <input type="color" id="overhead-color" value="#ffffff">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h4>Caustic Lights</h4>
+                <div class="slider-row">
+                    <label>Intensity</label>
+                    <input type="range" id="caustic-intensity" min="0" max="2" step="0.1" value="0.6">
+                    <span class="value-display" id="caustic-intensity-val">0.6</span>
+                </div>
+                <div class="slider-row">
+                    <label>Color</label>
+                    <input type="color" id="caustic-color" value="#44aaff">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h4>Tank Dimensions</h4>
+                <div class="slider-row">
+                    <label>Width</label>
+                    <input type="range" id="tank-width" min="10" max="150" step="5" value="50">
+                    <span class="value-display" id="tank-width-val">50</span>
+                </div>
+                <div class="slider-row">
+                    <label>Height</label>
+                    <input type="range" id="tank-height" min="5" max="100" step="5" value="20">
+                    <span class="value-display" id="tank-height-val">20</span>
+                </div>
+                <div class="slider-row">
+                    <label>Floor Y</label>
+                    <input type="range" id="tank-floor" min="-150" max="-10" step="5" value="-60">
+                    <span class="value-display" id="tank-floor-val">-60</span>
+                </div>
+                <div class="slider-row">
+                    <label>Ceiling</label>
+                    <input type="range" id="tank-ceiling" min="5" max="100" step="5" value="15">
+                    <span class="value-display" id="tank-ceiling-val">15</span>
+                </div>
+                <p class="panel-note">Swim bounds update live. Objects need refresh.</p>
+            </div>
+
+            <div class="panel-section">
+                <h4>Fog</h4>
+                <div class="slider-row">
+                    <label>Near</label>
+                    <input type="range" id="fog-near" min="0" max="50" step="1" value="15">
+                    <span class="value-display" id="fog-near-val">15</span>
+                </div>
+                <div class="slider-row">
+                    <label>Far</label>
+                    <input type="range" id="fog-far" min="10" max="200" step="5" value="80">
+                    <span class="value-display" id="fog-far-val">80</span>
+                </div>
+                <div class="slider-row">
+                    <label>Color</label>
+                    <input type="color" id="fog-color" value="#4477aa">
+                </div>
+            </div>
+
+            <button id="reset-lights" class="reset-btn">Reset to Defaults</button>
         </div>
     </div>
 
