@@ -226,12 +226,12 @@
         </div>
     </div>
 
-    <!-- Import map to resolve "three" package -->
+    <!-- Import map to resolve "three" package via CDN -->
     <script type="importmap">
     {
         "imports": {
-            "three": "./node_modules/three/build/three.module.js",
-            "three/addons/": "./node_modules/three/examples/jsm/"
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
         }
     }
     </script>
