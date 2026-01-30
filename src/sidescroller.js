@@ -1184,13 +1184,13 @@ export function handleSideScrollerInput(tank, input) {
  * Hide swimming tank UI elements
  */
 function hideSwimmingTankUI(folderName) {
-    const elements = ['controls', 'selection-hint', 'light-panel', 'crosshair', 'fileInfoPanel'];
+    const elements = ['controls', 'selection-hint', 'light-panel', 'crosshair', 'fileInfoPanel', 'controls-panel'];
     elements.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
 
-    // Show side-scroller controls hint
+    // Show side-scroller hint
     let hint = document.getElementById('sidescroller-hint');
     if (!hint) {
         hint = document.createElement('div');
@@ -1215,21 +1215,17 @@ function hideSwimmingTankUI(folderName) {
         <div style="
             position: fixed;
             bottom: 20px;
-            left: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(0,0,0,0.7);
             color: white;
-            padding: 15px 20px;
+            padding: 10px 20px;
             border-radius: 8px;
             font-family: Arial, sans-serif;
             font-size: 14px;
             z-index: 1000;
         ">
-            <div style="font-weight: bold; margin-bottom: 8px;">Controls</div>
-            <div>A/D or Arrows: Move</div>
-            <div>W/Space: Jump (double jump!)</div>
-            <div>S/Down: Drop through platform</div>
-            <div>Enter: Open file</div>
-            <div>Escape: Exit to tank</div>
+            <span style="opacity: 0.7;">Esc</span> to go back
         </div>
     `;
     hint.style.display = 'block';
@@ -1239,7 +1235,7 @@ function hideSwimmingTankUI(folderName) {
  * Show swimming tank UI elements
  */
 function showSwimmingTankUI() {
-    const elements = ['controls', 'crosshair'];
+    const elements = ['controls', 'crosshair', 'controls-panel'];
     elements.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = '';
