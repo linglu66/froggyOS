@@ -10,7 +10,7 @@
 body {
     overflow: hidden;
     background: #001122;
-    font-family: 'Arial', sans-serif;
+    font-family: 'Geist Mono', 'Consolas', 'Monaco', monospace;
     user-select: none;
 }
 
@@ -129,7 +129,7 @@ body {
     border-radius: 6px;
     padding: 8px 12px;
     color: #ffffff;
-    font-family: 'Arial', sans-serif;
+    font-family: 'Geist Mono', monospace;
     font-size: 11px;
     z-index: 150;
     backdrop-filter: blur(5px);
@@ -231,10 +231,6 @@ body {
     width: 100%;
     height: 100%;
     background: #001122;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
     z-index: 200;
     transition: opacity 0.5s ease-out;
 }
@@ -244,20 +240,9 @@ body {
     pointer-events: none;
 }
 
-#loading h2 {
-    color: #00ffff;
-    margin-bottom: 20px;
-    font-size: 24px;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid rgba(0, 255, 255, 0.3);
-    border-left: 4px solid #00ffff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+#loading-canvas {
+    width: 100%;
+    height: 100%;
 }
 
 /* Animations */
@@ -356,7 +341,7 @@ body {
 
 /* Text preview styling */
 .preview-content.text-preview {
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: 'Geist Mono', monospace;
     font-size: 13px;
     line-height: 1.6;
     color: #e0e0e0;

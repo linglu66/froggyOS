@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Swimming Tank - Interactive Frog Explorer</title>
     <meta name="description" content="Watch your frog swim through an underwater world of floating file folders using Three.js">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <!-- Loading Screen -->
     <div id="loading">
-        <h2>Preparing your frog for swimming...</h2>
-        <div class="loading-spinner"></div>
+        <canvas id="loading-canvas"></canvas>
     </div>
 
     <!-- Main Container -->
@@ -226,6 +228,82 @@
         </div>
     </div>
 
+    <!-- Loading animation script -->
+    <script>
+    (function() {
+        const canvas = document.getElementById('loading-canvas');
+        const ctx = canvas.getContext('2d');
+        let rotation = 0;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        function drawFrog(x, y, size, angle) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+
+            // Body
+            ctx.fillStyle = '#4a7c59';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, size * 0.8, size * 0.6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Head
+            ctx.fillStyle = '#5a8c69';
+            ctx.beginPath();
+            ctx.ellipse(0, -size * 0.5, size * 0.5, size * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-size * 0.25, -size * 0.65, size * 0.18, 0, Math.PI * 2);
+            ctx.arc(size * 0.25, -size * 0.65, size * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pupils
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath();
+            ctx.arc(-size * 0.25, -size * 0.65, size * 0.08, 0, Math.PI * 2);
+            ctx.arc(size * 0.25, -size * 0.65, size * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Back legs
+            ctx.fillStyle = '#4a7c59';
+            ctx.beginPath();
+            ctx.ellipse(-size * 0.6, size * 0.3, size * 0.35, size * 0.15, -0.5, 0, Math.PI * 2);
+            ctx.ellipse(size * 0.6, size * 0.3, size * 0.35, size * 0.15, 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Front legs
+            ctx.beginPath();
+            ctx.ellipse(-size * 0.5, -size * 0.1, size * 0.25, size * 0.1, -0.3, 0, Math.PI * 2);
+            ctx.ellipse(size * 0.5, -size * 0.1, size * 0.25, size * 0.1, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function animate() {
+            ctx.fillStyle = '#001122';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            rotation += 0.02;
+            drawFrog(canvas.width / 2, canvas.height / 2, 60, rotation);
+
+            if (document.getElementById('loading').style.display !== 'none') {
+                requestAnimationFrame(animate);
+            }
+        }
+        animate();
+    })();
+    </script>
+
     <!-- Import map to resolve "three" package via CDN -->
     <script type="importmap">
     {
@@ -235,7 +313,7 @@
         }
     }
     </script>
-    
+
     <!-- Scripts -->
     <script type="module" src="src/main.js"></script>
 </body>

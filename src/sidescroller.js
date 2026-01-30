@@ -1149,19 +1149,20 @@ function showFileHint(name, type) {
             bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
+            background: rgba(0, 20, 40, 0.9);
+            color: #fff;
             padding: 10px 20px;
-            border-radius: 8px;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            font-family: 'Geist Mono', monospace;
+            font-size: 13px;
             z-index: 1000;
             text-align: center;
             pointer-events: none;
         `;
         document.body.appendChild(hint);
     }
-    hint.innerHTML = `<strong>${name}</strong><br><span style="color: #aaa; font-size: 12px;">[Enter] to open</span>`;
+    hint.innerHTML = `<span style="color: #00ffff; font-weight: 600;">${name}</span><br><span style="color: #88aaaa; font-size: 11px;"><span style="color: #00ffff;">Enter</span> to open</span>`;
     hint.style.display = 'block';
 }
 
@@ -1203,29 +1204,32 @@ function hideSwimmingTankUI(folderName) {
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            color: white;
+            background: rgba(0, 20, 40, 0.85);
+            color: #00ffff;
             padding: 10px 25px;
-            border-radius: 8px;
-            font-family: Arial, sans-serif;
-            font-size: 18px;
-            font-weight: bold;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            font-family: 'Geist Mono', monospace;
+            font-size: 16px;
+            font-weight: 600;
             z-index: 1000;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
         ">${folderName || 'Folder'}</div>
         <div style="
             position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
+            background: rgba(0, 20, 40, 0.85);
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            font-family: 'Geist Mono', monospace;
+            font-size: 13px;
             z-index: 1000;
         ">
-            <span style="opacity: 0.7;">Esc</span> to go back
+            <span style="color: #00ffff;">Esc</span> to go back
         </div>
     `;
     hint.style.display = 'block';
