@@ -1,0 +1,35 @@
+============================
+   WEEKLY TODO LIST
+============================
+
+MONDAY
+[x] Morning standup
+[x] Review pull requests
+[ ] Update documentation
+[ ] Fix login bug (#1234)
+
+TUESDAY
+[ ] Design review meeting
+[ ] Implement search feature
+[ ] Write unit tests
+
+WEDNESDAY
+[ ] Team lunch @ 12:30
+[ ] Code review with Marcus
+[ ] Deploy to staging
+
+THURSDAY
+[ ] Sprint planning
+[ ] Performance optimization
+[ ] Update dependencies
+
+FRIDAY
+[ ] Weekly retrospective
+[ ] Clean up branches
+[ ] Plan next week
+
+---
+NOTES:
+- Remember to backup database before Thursday deploy
+- Lisa needs design assets by Wednesday EOD
+- Check AWS costs - might need to optimize

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#1a1a2e"/>
+
+  <!-- Title -->
+  <text x="200" y="30" text-anchor="middle" fill="#ffffff" font-family="Arial" font-size="16" font-weight="bold">Q1 Revenue by Region</text>
+
+  <!-- Grid lines -->
+  <line x1="60" y1="250" x2="380" y2="250" stroke="#333" stroke-width="1"/>
+  <line x1="60" y1="200" x2="380" y2="200" stroke="#333" stroke-width="1" stroke-dasharray="4"/>
+  <line x1="60" y1="150" x2="380" y2="150" stroke="#333" stroke-width="1" stroke-dasharray="4"/>
+  <line x1="60" y1="100" x2="380" y2="100" stroke="#333" stroke-width="1" stroke-dasharray="4"/>
+
+  <!-- Y-axis labels -->
+  <text x="50" y="255" text-anchor="end" fill="#888" font-family="Arial" font-size="10">$0</text>
+  <text x="50" y="205" text-anchor="end" fill="#888" font-family="Arial" font-size="10">$25K</text>
+  <text x="50" y="155" text-anchor="end" fill="#888" font-family="Arial" font-size="10">$50K</text>
+  <text x="50" y="105" text-anchor="end" fill="#888" font-family="Arial" font-size="10">$75K</text>
+
+  <!-- Bars -->
+  <rect x="80" y="130" width="50" height="120" fill="#4ade80" rx="4"/>
+  <rect x="150" y="90" width="50" height="160" fill="#60a5fa" rx="4"/>
+  <rect x="220" y="170" width="50" height="80" fill="#f472b6" rx="4"/>
+  <rect x="290" y="110" width="50" height="140" fill="#fbbf24" rx="4"/>
+
+  <!-- X-axis labels -->
+  <text x="105" y="270" text-anchor="middle" fill="#888" font-family="Arial" font-size="11">North</text>
+  <text x="175" y="270" text-anchor="middle" fill="#888" font-family="Arial" font-size="11">South</text>
+  <text x="245" y="270" text-anchor="middle" fill="#888" font-family="Arial" font-size="11">East</text>
+  <text x="315" y="270" text-anchor="middle" fill="#888" font-family="Arial" font-size="11">West</text>
+
+  <!-- Values on bars -->
+  <text x="105" y="120" text-anchor="middle" fill="#fff" font-family="Arial" font-size="11" font-weight="bold">$60K</text>
+  <text x="175" y="80" text-anchor="middle" fill="#fff" font-family="Arial" font-size="11" font-weight="bold">$80K</text>
+  <text x="245" y="160" text-anchor="middle" fill="#fff" font-family="Arial" font-size="11" font-weight="bold">$40K</text>
+  <text x="315" y="100" text-anchor="middle" fill="#fff" font-family="Arial" font-size="11" font-weight="bold">$70K</text>
+</svg>

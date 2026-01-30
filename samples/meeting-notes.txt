@@ -1,0 +1,34 @@
+# Team Sync - January 28, 2026
+
+## Attendees
+- Sarah Chen (Product)
+- Marcus Williams (Engineering)
+- Lisa Park (Design)
+
+## Agenda
+
+### 1. Q1 Roadmap Review
+- Feature freeze scheduled for Feb 15
+- Beta launch targeting March 1
+- Need to finalize API contracts by EOW
+
+### 2. Technical Debt
+Marcus raised concerns about the authentication module:
+- Session handling needs refactoring
+- Token refresh logic is fragile
+- Estimated 2 sprints to address
+
+### 3. Design System Updates
+Lisa presented new component library:
+- Dark mode support added
+- Accessibility audit complete (WCAG 2.1 AA)
+- New icon set ready for implementation
+
+## Action Items
+[ ] Sarah: Send updated timeline to stakeholders
+[ ] Marcus: Create tech debt tickets in Jira
+[ ] Lisa: Share Figma links for new components
+[ ] All: Review competitor analysis doc by Friday
+
+## Next Meeting
+February 4, 2026 @ 2:00 PM PST

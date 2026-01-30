@@ -19,13 +19,20 @@
 
         <!-- Crosshair -->
         <div id="crosshair"></div>
+
+        <!-- Selection hint -->
+        <div id="selection-hint" class="selection-hint">Press <strong>Enter</strong> to preview</div>
         
         <!-- Controls Display -->
         <div id="controls">
-            <div class="control-item"><strong>M:</strong> Toggle Multi-Frog Mode</div>
-            <div class="control-item"><strong>B:</strong> Debug Scene State</div>
-            <div class="control-item"><strong>L:</strong> Toggle Light Panel</div>
+            <div class="control-item"><strong>Enter:</strong> Preview File</div>
+            <div class="control-item"><strong>Esc:</strong> Close Preview</div>
+            <div class="control-item"><strong>L:</strong> Light Panel</div>
+            <div class="control-item"><strong>M:</strong> Multi-Frog</div>
         </div>
+
+        <!-- Container for dynamically created preview windows -->
+        <div id="preview-container"></div>
 
         <!-- Lighting Config Panel -->
         <div id="light-panel" class="config-panel hidden">

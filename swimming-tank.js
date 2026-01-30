@@ -57,6 +57,32 @@ class SwimmingTank {
         this.selectionBorder = null; // Selection border mesh
         this.fileInfoPanel = null; // File information display panel
 
+        // Preview windows state
+        this.previewWindows = []; // Array of open preview windows
+        this.previewZIndex = 300; // Starting z-index for preview windows
+        this.dragState = null; // Current drag state
+
+        // Bubble object pool for performance
+        this.bubblePool = []; // Inactive bubbles ready for reuse
+        this.maxPoolSize = 100; // Max bubbles to keep in pool
+
+        // Sample content pools - will be assigned to files based on type
+        this.samplePools = {
+            text: [
+                { type: 'text', url: 'samples/meeting-notes.txt' },
+                { type: 'text', url: 'samples/project-readme.txt' },
+                { type: 'text', url: 'samples/todo-list.txt' },
+            ],
+            image: [
+                { type: 'image', url: 'samples/chart.svg' },
+                { type: 'image', url: 'samples/landscape.svg' },
+                { type: 'image', url: 'samples/profile.svg' },
+            ],
+            doc: [
+                { type: 'doc', url: 'samples/report.html' },
+            ]
+        };
+
         // Configuration
         this.config = {
             movement: {
@@ -278,7 +304,8 @@ class SwimmingTank {
             this.setupEventListeners();
             console.log('✅ Event listeners setup');
             this.setupLightPanel();
-            console.log('✅ Light panel setup');
+            this.setupPreviewPanel();
+            console.log('✅ Panels setup');
             this.startAnimation();
             console.log('✅ Animation started');
             // Note: Loading screen will be hidden after frog loads successfully
@@ -1366,23 +1393,8 @@ class SwimmingTank {
         // labelMeshBack.rotation.y = Math.PI; // Rotate 180 degrees to face the other way
         // folderGroup.add(labelMeshBack);
 
-        // Additional labels on main folder body for better visibility
-        // Front body label
-        const bodyLabelFront = this.createTextLabel(label, '#000000', 'rgba(255,204,0,0.1)');
-        bodyLabelFront.position.set(0, 0, 0.16);
-        bodyLabelFront.scale.set(1.2, 1.2, 1);
-        folderGroup.add(bodyLabelFront);
+        // Labels removed - file info shown on selection instead
 
-        // Back body label
-        const bodyLabelBack = this.createTextLabel(label, '#000000', 'rgba(255,204,0,0.1)');
-        bodyLabelBack.position.set(0, 0, -0.16);
-        bodyLabelBack.scale.set(1.2, 1.2, 1);
-        bodyLabelBack.rotation.y = Math.PI;
-        folderGroup.add(bodyLabelBack);
-
-        // Side labels for left and right visibility
-        // Left side label
-     
 
         // Scale the folder based on size
         folderGroup.scale.setScalar(scale);
@@ -1430,33 +1442,7 @@ class SwimmingTank {
         pdfGroup.add(foldMesh);
 
         // Create text labels on both sides of the document
-        // Front side label (bottom)
-        const labelMeshFront = this.createTextLabel(label, '#333333', 'transparent');
-        labelMeshFront.position.set(0, -0.35, 0.026);
-        labelMeshFront.scale.set(1.2, 1.2, 1);
-        pdfGroup.add(labelMeshFront);
-
-        // Back side label (bottom, flipped)
-        const labelMeshBack = this.createTextLabel(label, '#333333', 'transparent');
-        labelMeshBack.position.set(0, -0.35, -0.026);
-        labelMeshBack.scale.set(1.2, 1.2, 1);
-        labelMeshBack.rotation.y = Math.PI; // Rotate 180 degrees to face the other way
-        pdfGroup.add(labelMeshBack);
-
-        // Additional labels in center of document for better visibility
-        // Front center label
-        const centerLabelFront = this.createTextLabel(label, '#666666', 'rgba(255,255,255,0.1)');
-        centerLabelFront.position.set(0, 0.1, 0.026);
-        centerLabelFront.scale.set(1.0, 1.0, 1);
-        pdfGroup.add(centerLabelFront);
-
-        // Back center label
-        const centerLabelBack = this.createTextLabel(label, '#666666', 'rgba(255,255,255,0.1)');
-        centerLabelBack.position.set(0, 0.1, -0.026);
-        centerLabelBack.scale.set(1.0, 1.0, 1);
-        centerLabelBack.rotation.y = Math.PI;
-        pdfGroup.add(centerLabelBack);
-
+        // Labels removed - file info shown on selection instead
 
         // Position and rotate PDF (less random rotation)
         pdfGroup.position.set(x, y, z);
@@ -1648,6 +1634,18 @@ class SwimmingTank {
                 case 'KeyL':
                     // Toggle light config panel
                     this.toggleLightPanel();
+                    break;
+                case 'Enter':
+                    // Open preview for selected file (allows multiple windows)
+                    if (this.selectedObject) {
+                        this.openPreview(this.selectedObject);
+                    }
+                    break;
+                case 'Escape':
+                    // Close preview panel
+                    if (this.previewWindows.length > 0) {
+                        this.closePreview();
+                    }
                     break;
             }
         };
@@ -2536,14 +2534,25 @@ class SwimmingTank {
         if (bestObject !== this.selectedObject) {
             this.removeSelectionBorder();
             this.selectedObject = bestObject;
-            
+
+            // Show/hide selection hint
+            const hint = document.getElementById('selection-hint');
+
             if (this.selectedObject) {
                 this.createSelectionBorder();
                 this.showFileInfo();
                 // Make frogs swim to selected folder in multi-frog mode
                 this.makeFrogsSwimToFolder(this.selectedObject);
+                // Show hint (but not if preview is open)
+                if (hint && !this.previewWindows.length > 0) {
+                    hint.classList.add('visible');
+                }
             } else {
                 this.hideFileInfo();
+                // Hide hint
+                if (hint) {
+                    hint.classList.remove('visible');
+                }
             }
         }
 
@@ -2943,6 +2952,240 @@ class SwimmingTank {
     }
 
     /**
+     * Open a new file preview window for a selected object
+     */
+    openPreview(object) {
+        if (!object || !object.userData) return;
+
+        const fileData = object.userData;
+        if (!fileData.name) return;
+
+        // Only allow preview for files, not folders
+        if (fileData.type === 'folder') {
+            console.log('📁 Folder navigation coming soon...');
+            return;
+        }
+
+        // Cap at 5 preview windows - close oldest if at limit
+        const MAX_PREVIEW_WINDOWS = 5;
+        while (this.previewWindows.length >= MAX_PREVIEW_WINDOWS) {
+            this.closePreviewWindow(this.previewWindows[0].id);
+        }
+
+        // Create new preview window
+        const windowId = 'preview-' + Date.now();
+        const container = document.getElementById('preview-container');
+        if (!container) return;
+
+        // Calculate position (stack windows with offset)
+        const offset = this.previewWindows.length * 30;
+        const startX = 20 + offset;
+        const startY = 20 + offset;
+
+        // Create window element
+        const panel = document.createElement('div');
+        panel.id = windowId;
+        panel.className = 'preview-panel';
+        panel.style.left = startX + 'px';
+        panel.style.top = startY + 'px';
+        panel.style.zIndex = ++this.previewZIndex;
+
+        panel.innerHTML = `
+            <div class="preview-header">
+                <div class="preview-file-info">
+                    <span class="preview-icon">📄</span>
+                    <span class="preview-filename">${fileData.name}</span>
+                </div>
+                <button class="close-btn" data-window-id="${windowId}">&times;</button>
+            </div>
+            <div class="preview-content">
+                <div class="pdf-placeholder">
+                    <div class="pdf-icon">⏳</div>
+                    <p>Loading...</p>
+                </div>
+            </div>
+            <div class="preview-footer">
+                <span class="preview-meta">Size: ${fileData.size} | Type: ${fileData.type}</span>
+            </div>
+        `;
+
+        container.appendChild(panel);
+
+        // Track window
+        this.previewWindows.push({ id: windowId, element: panel, fileData });
+
+        // Setup close button
+        const closeBtn = panel.querySelector('.close-btn');
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closePreviewWindow(windowId);
+        });
+
+        // Setup drag on header
+        const header = panel.querySelector('.preview-header');
+        this.setupWindowDrag(panel, header);
+
+        // Focus on click
+        panel.addEventListener('mousedown', () => {
+            this.focusPreviewWindow(windowId);
+        });
+
+        // Load content
+        const content = panel.querySelector('.preview-content');
+        const nameHash = fileData.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+
+        let poolType;
+        if (fileData.name.includes('Report') || fileData.name.includes('Contract') || fileData.name.includes('Policy')) {
+            poolType = 'doc';
+        } else if (fileData.name.includes('Photo') || fileData.name.includes('IMG') || fileData.name.includes('screenshot') || fileData.name.includes('Chart') || fileData.name.includes('Presentation')) {
+            poolType = 'image';
+        } else {
+            poolType = (nameHash % 3 === 0) ? 'image' : 'text';
+        }
+
+        const pool = this.samplePools[poolType];
+        const sampleInfo = pool[nameHash % pool.length];
+        this.loadPreviewContent(sampleInfo, content);
+
+        // Hide hint
+        const hint = document.getElementById('selection-hint');
+        if (hint) hint.classList.remove('visible');
+
+        console.log(`📄 Opened preview for: ${fileData.name}`);
+    }
+
+    /**
+     * Setup dragging for a preview window
+     */
+    setupWindowDrag(panel, header) {
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('close-btn')) return;
+
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            initialX = panel.offsetLeft;
+            initialY = panel.offsetTop;
+
+            panel.style.transition = 'none';
+
+            const onMouseMove = (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                panel.style.left = (initialX + dx) + 'px';
+                panel.style.top = (initialY + dy) + 'px';
+            };
+
+            const onMouseUp = () => {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+    }
+
+    /**
+     * Focus a preview window (bring to front)
+     */
+    focusPreviewWindow(windowId) {
+        const windowData = this.previewWindows.find(w => w.id === windowId);
+        if (windowData) {
+            // Remove focused class from all
+            this.previewWindows.forEach(w => w.element.classList.remove('focused'));
+            // Add to this one and bring to front
+            windowData.element.classList.add('focused');
+            windowData.element.style.zIndex = ++this.previewZIndex;
+        }
+    }
+
+    /**
+     * Close a specific preview window
+     */
+    closePreviewWindow(windowId) {
+        const index = this.previewWindows.findIndex(w => w.id === windowId);
+        if (index !== -1) {
+            const windowData = this.previewWindows[index];
+            windowData.element.remove();
+            this.previewWindows.splice(index, 1);
+            console.log(`📂 Closed preview: ${windowData.fileData.name}`);
+        }
+
+        // Show hint if no windows open and object selected
+        if (this.previewWindows.length === 0) {
+            const hint = document.getElementById('selection-hint');
+            if (hint && this.selectedObject) {
+                hint.classList.add('visible');
+            }
+        }
+    }
+
+    /**
+     * Close topmost preview window (for Escape key)
+     */
+    closePreview() {
+        if (this.previewWindows.length > 0) {
+            // Close the topmost (last) window
+            const topWindow = this.previewWindows[this.previewWindows.length - 1];
+            this.closePreviewWindow(topWindow.id);
+        }
+    }
+
+    /**
+     * Setup preview system (called once during init)
+     */
+    setupPreviewPanel() {
+        // Nothing needed - windows are created dynamically
+    }
+
+    /**
+     * Load preview content based on file type
+     */
+    async loadPreviewContent(sampleInfo, container) {
+        container.className = 'preview-content';
+
+        try {
+            if (sampleInfo.type === 'text') {
+                const response = await fetch(sampleInfo.url);
+                const text = await response.text();
+                container.className = 'preview-content text-preview';
+                container.textContent = text;
+
+            } else if (sampleInfo.type === 'image') {
+                container.className = 'preview-content image-preview';
+                container.innerHTML = `<img src="${sampleInfo.url}" alt="Preview" />`;
+
+            } else if (sampleInfo.type === 'doc') {
+                container.className = 'preview-content doc-preview';
+                container.innerHTML = `<iframe src="${sampleInfo.url}" title="Document Preview"></iframe>`;
+
+            } else {
+                container.innerHTML = `
+                    <div class="pdf-placeholder">
+                        <div class="pdf-icon">❓</div>
+                        <p>Unknown file type</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading preview:', error);
+            container.innerHTML = `
+                <div class="pdf-placeholder">
+                    <div class="pdf-icon">⚠️</div>
+                    <p>Failed to load preview</p>
+                    <p style="color: #666; font-size: 12px;">${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    /**
      * Setup the lighting config panel event listeners
      */
     setupLightPanel() {
@@ -3182,55 +3425,48 @@ class SwimmingTank {
      */
     createDashBubbles() {
         if (!this.frog) return;
-        
-        // Create burst of bubbles for dash effect
-        for (let i = 0; i < 8; i++) {
-            // Get frog direction for bubble positioning
+
+        // Create burst of bubbles for dash effect (reduced from 8 to 5)
+        for (let i = 0; i < 5; i++) {
             const frogDirection = new THREE.Vector3(0, 0, 1);
             frogDirection.applyQuaternion(this.frog.quaternion);
-            
-            // Position bubbles behind frog with extra wide spread for dash
+
             const bubblePosition = this.frog.position.clone();
             bubblePosition.add(frogDirection.multiplyScalar(-1.0 - Math.random() * 0.5));
-            bubblePosition.x += (Math.random() - 0.5) * 2.0; // Very wide spread
+            bubblePosition.x += (Math.random() - 0.5) * 2.0;
             bubblePosition.y += (Math.random() - 0.5) * 1.5;
             bubblePosition.z += (Math.random() - 0.5) * 2.0;
-            
-            // Create larger, more dramatic bubbles with high-quality geometry
-            const bubbleSize = 0.08 + Math.random() * 0.08;
-            const bubbleGeometry = new THREE.SphereGeometry(bubbleSize, 20, 16);
 
-            // Create fresnel bubble material - larger dash bubbles with more visible rims
-            const bubbleMaterial = this.createBubbleMaterial({
-                baseOpacity: 0.05 + Math.random() * 0.05,  // Transparent center
-                rimOpacity: 0.6 + Math.random() * 0.3,     // More visible rim for dash effect
-                rimPower: 1.5 + Math.random() * 0.5,       // Softer falloff for larger bubbles
-                color: new THREE.Color(0xddeeff),          // Slightly whiter for dash
-                emissiveColor: new THREE.Color(0x002244)
-            });
-
-            const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+            // Get bubble from pool
+            const bubble = this.getBubbleFromPool();
             bubble.position.copy(bubblePosition);
-            
-            // Add enhanced bubble data with more realistic physics
+
+            // Reset material uniforms for dash effect
+            if (bubble.material.uniforms) {
+                bubble.material.uniforms.baseOpacity.value = 0.05 + Math.random() * 0.05;
+                bubble.material.uniforms.rimOpacity.value = 0.6 + Math.random() * 0.3;
+                bubble.material.uniforms.rimPower.value = 1.5 + Math.random() * 0.5;
+            }
+
+            const life = 1.5 + Math.random() * 0.5;
             bubble.userData = {
-                life: 1.5 + Math.random() * 0.5,
-                maxLife: 1.5 + Math.random() * 0.5,
+                life: life,
+                maxLife: life,
                 velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.4, // Faster horizontal movement for dash
-                    0.6 + Math.random() * 0.4,   // Faster upward velocity for dash
+                    (Math.random() - 0.5) * 0.4,
+                    0.6 + Math.random() * 0.4,
                     (Math.random() - 0.5) * 0.4
                 ),
                 rotationSpeed: new THREE.Vector3(
-                    (Math.random() - 0.5) * 4.0, // Faster rotation for dash effect
+                    (Math.random() - 0.5) * 4.0,
                     (Math.random() - 0.5) * 4.0,
                     (Math.random() - 0.5) * 4.0
                 ),
-                wobble: Math.random() * Math.PI * 2, // Random wobble phase
-                wobbleSpeed: 4.0 + Math.random() * 4.0, // Faster wobble for dash
-                scale: 1.0 + Math.random() * 0.3 // Random initial scale variation
+                wobble: Math.random() * Math.PI * 2,
+                wobbleSpeed: 4.0 + Math.random() * 4.0,
+                scale: 1.0 + Math.random() * 0.3
             };
-            
+
             this.scene.add(bubble);
             this.bubbles.push(bubble);
         }
@@ -3239,58 +3475,93 @@ class SwimmingTank {
     /**
      * Create realistic, 3D glassy bubble trail particles behind the frog
      */
-    createBubbleTrail() {
-        if (!this.frog) return;
-        
-        // Create 3-5 bubbles behind the frog for wider trail
-        const bubbleCount = 3 + Math.floor(Math.random() * 3); // 3-5 bubbles
-        
-        for (let i = 0; i < bubbleCount; i++) {
-            // Calculate position behind the frog
-            const frogDirection = new THREE.Vector3(0, 0, 1); // Default forward direction
-            frogDirection.applyQuaternion(this.frog.quaternion);
-            
-            // Position bubbles behind the frog with wider randomness
-            const bubblePosition = this.frog.position.clone();
-            bubblePosition.add(frogDirection.multiplyScalar(-1.5 - Math.random() * 0.8)); // Behind frog, more depth variation
-            bubblePosition.x += (Math.random() - 0.5) * 1.2; // Much wider horizontal spread
-            bubblePosition.y += (Math.random() - 0.5) * 0.8; // Wider vertical spread
-            bubblePosition.z += (Math.random() - 0.5) * 1.2; // Much wider depth spread
-            
-            // Create realistic bubble geometry with more segments for smoothness
-            const bubbleSize = 0.05 + Math.random() * 0.05; // Random size
-            const bubbleGeometry = new THREE.SphereGeometry(bubbleSize, 16, 12);
+    /**
+     * Get a bubble from the pool or create a new one
+     */
+    getBubbleFromPool(size = 0.05) {
+        let bubble;
 
-            // Create fresnel bubble material - thin membrane with visible edges
+        if (this.bubblePool.length > 0) {
+            // Reuse from pool
+            bubble = this.bubblePool.pop();
+            bubble.scale.setScalar(1);
+            bubble.visible = true;
+        } else {
+            // Create new bubble
+            const bubbleGeometry = new THREE.SphereGeometry(size, 12, 8); // Reduced segments for performance
             const bubbleMaterial = this.createBubbleMaterial({
-                baseOpacity: 0.03 + Math.random() * 0.05,  // Very transparent center
-                rimOpacity: 0.4 + Math.random() * 0.3,     // Visible rim
-                rimPower: 1.8 + Math.random() * 0.8,       // Rim sharpness
-                color: new THREE.Color(0xcceeFF),          // Light blue tint
+                baseOpacity: 0.05,
+                rimOpacity: 0.5,
+                rimPower: 2.0,
+                color: new THREE.Color(0xcceeFF),
                 emissiveColor: new THREE.Color(0x001122)
             });
+            bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+        }
 
-            const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+        return bubble;
+    }
+
+    /**
+     * Return a bubble to the pool for reuse
+     */
+    returnBubbleToPool(bubble) {
+        this.scene.remove(bubble);
+        bubble.visible = false;
+
+        if (this.bubblePool.length < this.maxPoolSize) {
+            this.bubblePool.push(bubble);
+        } else {
+            // Pool is full, dispose
+            bubble.geometry.dispose();
+            bubble.material.dispose();
+        }
+    }
+
+    createBubbleTrail() {
+        if (!this.frog) return;
+
+        const bubbleCount = 2 + Math.floor(Math.random() * 2); // 2-3 bubbles (reduced)
+
+        for (let i = 0; i < bubbleCount; i++) {
+            const frogDirection = new THREE.Vector3(0, 0, 1);
+            frogDirection.applyQuaternion(this.frog.quaternion);
+
+            const bubblePosition = this.frog.position.clone();
+            bubblePosition.add(frogDirection.multiplyScalar(-1.5 - Math.random() * 0.8));
+            bubblePosition.x += (Math.random() - 0.5) * 1.2;
+            bubblePosition.y += (Math.random() - 0.5) * 0.8;
+            bubblePosition.z += (Math.random() - 0.5) * 1.2;
+
+            // Get bubble from pool
+            const bubble = this.getBubbleFromPool();
             bubble.position.copy(bubblePosition);
-            
-            // Add bubble data for animation with more realistic physics
+
+            // Reset material uniforms
+            if (bubble.material.uniforms) {
+                bubble.material.uniforms.baseOpacity.value = 0.03 + Math.random() * 0.05;
+                bubble.material.uniforms.rimOpacity.value = 0.4 + Math.random() * 0.3;
+                bubble.material.uniforms.rimPower.value = 1.8 + Math.random() * 0.8;
+            }
+
+            const life = 2.0 + Math.random() * 1.0;
             bubble.userData = {
-                life: 2.0 + Math.random() * 1.0, // Lifespan 2-3 seconds
-                maxLife: 2.0 + Math.random() * 1.0,
+                life: life,
+                maxLife: life,
                 velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.15, // Slight horizontal drift
-                    0.4 + Math.random() * 0.3,   // Upward velocity with variation
+                    (Math.random() - 0.5) * 0.15,
+                    0.4 + Math.random() * 0.3,
                     (Math.random() - 0.5) * 0.15
                 ),
                 rotationSpeed: new THREE.Vector3(
-                    (Math.random() - 0.5) * 2.0, // Random rotation for 3D effect
+                    (Math.random() - 0.5) * 2.0,
                     (Math.random() - 0.5) * 2.0,
                     (Math.random() - 0.5) * 2.0
                 ),
-                wobble: Math.random() * Math.PI * 2, // Random wobble phase
-                wobbleSpeed: 2.0 + Math.random() * 3.0 // Wobble speed variation
+                wobble: Math.random() * Math.PI * 2,
+                wobbleSpeed: 2.0 + Math.random() * 3.0
             };
-            
+
             this.scene.add(bubble);
             this.bubbles.push(bubble);
         }
@@ -3350,11 +3621,9 @@ class SwimmingTank {
                 bubble.scale.setScalar(scale);
             }
             
-            // Remove dead bubbles
+            // Remove dead bubbles - return to pool
             if (data.life <= 0) {
-                this.scene.remove(bubble);
-                bubble.geometry.dispose();
-                bubble.material.dispose();
+                this.returnBubbleToPool(bubble);
                 this.bubbles.splice(i, 1);
             }
         }
