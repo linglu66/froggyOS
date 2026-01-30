@@ -1,0 +1,194 @@
+# File Layout Configuration
+# Maps files to semantic groups and tank areas
+# Areas: rockCircle, sandcastle, seaweedGrove, starfishBeach, mixedGarden, center
+
+areas:
+  rockCircle:
+    name: "Rock Circle"
+    description: "Daily life essentials - the stuff you need every day"
+    position: { x: 10, z: -8 }
+
+  sandcastle:
+    name: "Sandcastle"
+    description: "Dreams and aspirations - things you're building toward"
+    position: { x: 0, z: 15 }
+
+  seaweedGrove:
+    name: "Seaweed Grove"
+    description: "Inner world - private thoughts and feelings"
+    position: { x: -30, z: 15 }
+
+  starfishBeach:
+    name: "Starfish Beach"
+    description: "Memories - the past, relationships, nostalgia"
+    position: { x: 20, z: 30 }
+
+  mixedGarden:
+    name: "Mixed Garden"
+    description: "Work life - the grind, responsibilities"
+    position: { x: -20, z: -25 }
+
+  center:
+    name: "Center"
+    description: "Misc and junk - the unsorted stuff"
+    position: { x: 0, z: 0 }
+
+groups:
+  # === DAILY LIFE (Rock Circle) ===
+  dailyLife:
+    area: rockCircle
+    files:
+      - path: "content/todo.txt"
+        name: "todo.txt"
+      - path: "content/groceries.txt"
+        name: "groceries.txt"
+      - path: "content/sleep-schedule.txt"
+        name: "sleep-schedule.txt"
+      - path: "content/passwords.txt"
+        name: "passwords.txt"
+      - path: "content/new-apartment.txt"
+        name: "new-apartment.txt"
+
+  # === DREAMS & ASPIRATIONS (Sandcastle) ===
+  dreams:
+    area: sandcastle
+    files:
+      - path: "content/ideas.txt"
+        name: "ideas.txt"
+      - path: "content/books.txt"
+        name: "books.txt"
+      - path: "content/movies to watch.txt"
+        name: "movies to watch.txt"
+      - path: "content/random/names-for-future-pet.txt"
+        name: "names-for-future-pet.txt"
+      - path: "content/random/shower-thoughts.txt"
+        name: "shower-thoughts.txt"
+      - path: "content/music/learning-guitar.txt"
+        name: "learning-guitar.txt"
+
+  # === INNER WORLD (Seaweed Grove) ===
+  innerWorld:
+    area: seaweedGrove
+    files:
+      - path: "content/journal/the-dream.txt"
+        name: "the-dream.txt"
+      - path: "content/journal/therapy-homework.txt"
+        name: "therapy-homework.txt"
+      - path: "content/journal/jan-15.txt"
+        name: "jan-15.txt"
+      - path: "content/journal/mar-3.txt"
+        name: "mar-3.txt"
+      - path: "content/journal/gratitude-list.txt"
+        name: "gratitude-list.txt"
+      - path: "content/journal/good-things.txt"
+        name: "good-things.txt"
+      - path: "content/reasons.txt"
+        name: "reasons.txt"
+      - path: "content/drafts/dating-profile.txt"
+        name: "dating-profile.txt"
+      - path: "content/music/do-not-open.txt"
+        name: "do-not-open.txt"
+
+  # === MEMORIES & RELATIONSHIPS (Starfish Beach) ===
+  memories:
+    area: starfishBeach
+    files:
+      - path: "content/old/letter-never-sent.txt"
+        name: "letter-never-sent.txt"
+      - path: "content/old/anniversary-ideas.txt"
+        name: "anniversary-ideas.txt"
+      - path: "content/old/pros-and-cons.txt"
+        name: "pros-and-cons.txt"
+      - path: "content/old/voicemail-transcript.txt"
+        name: "voicemail-transcript.txt"
+      - path: "content/old/apartment-hunting-2023.txt"
+        name: "apartment-hunting-2023.txt"
+      - path: "content/drafts/text-to-alex.txt"
+        name: "text-to-alex.txt"
+      - path: "content/drafts/text-to-danny.txt"
+        name: "text-to-danny.txt"
+      - path: "content/things to talk about.txt"
+        name: "things to talk about.txt"
+      - path: "content/random/compliments.txt"
+        name: "compliments.txt"
+      - path: "content/photos/favorites.txt"
+        name: "favorites.txt"
+      - path: "content/photos/to-organize.txt"
+        name: "to-organize.txt"
+      - path: "content/photos/the-trip/day1.txt"
+        name: "day1.txt"
+      - path: "content/photos/the-trip/day2.txt"
+        name: "day2.txt"
+      - path: "content/photos/the-trip/day3.txt"
+        name: "day3.txt"
+      - path: "content/photos/the-trip/notes.txt"
+        name: "trip-notes.txt"
+
+  # === WORK LIFE (Mixed Garden) ===
+  workLife:
+    area: mixedGarden
+    files:
+      - path: "content/work/email-draft.txt"
+        name: "email-draft.txt"
+      - path: "content/work/meeting-notes-11-4.txt"
+        name: "meeting-notes-11-4.txt"
+      - path: "content/work/performance-review-notes.txt"
+        name: "performance-review-notes.txt"
+      - path: "content/work/quit-fantasy.txt"
+        name: "quit-fantasy.txt"
+      - path: "content/work/timesheet-jan.txt"
+        name: "timesheet-jan.txt"
+      - path: "content/downloads/resume-v2-FINAL.txt"
+        name: "resume-v2-FINAL.txt"
+      - path: "content/downloads/resume-v2-FINAL-real.txt"
+        name: "resume-v2-FINAL-real.txt"
+      - path: "content/downloads/tax-stuff-2024.txt"
+        name: "tax-stuff-2024.txt"
+
+  # === MISC / UNSORTED (Center) ===
+  misc:
+    area: center
+    files:
+      - path: "content/untitled.txt"
+        name: "untitled.txt"
+      - path: "content/downloads/untitled(1).txt"
+        name: "untitled(1).txt"
+      - path: "content/downloads/untitled(2).txt"
+        name: "untitled(2).txt"
+      - path: "content/downloads/readme.txt"
+        name: "readme.txt"
+      - path: "content/downloads/apartment-listing.txt"
+        name: "apartment-listing.txt"
+      - path: "content/recipes/cricket-crunch-alexs.txt"
+        name: "cricket-crunch-alexs.txt"
+      - path: "content/recipes/grandmas-fly-casserole.txt"
+        name: "grandmas-fly-casserole.txt"
+      - path: "content/recipes/green-smoothie.txt"
+        name: "green-smoothie.txt"
+      - path: "content/recipes/stuff-to-try.txt"
+        name: "stuff-to-try.txt"
+      - path: "content/music/night-swimming.txt"
+        name: "night-swimming.txt"
+      - path: "content/music/workout.txt"
+        name: "workout.txt"
+
+# Folders (displayed as folder objects)
+folders:
+  - name: "downloads"
+    area: center
+  - name: "drafts"
+    area: seaweedGrove
+  - name: "journal"
+    area: seaweedGrove
+  - name: "music"
+    area: sandcastle
+  - name: "old"
+    area: starfishBeach
+  - name: "photos"
+    area: starfishBeach
+  - name: "random"
+    area: sandcastle
+  - name: "recipes"
+    area: center
+  - name: "work"
+    area: mixedGarden

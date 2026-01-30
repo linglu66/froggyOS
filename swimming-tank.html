@@ -23,12 +23,23 @@
         <!-- Selection hint -->
         <div id="selection-hint" class="selection-hint">Press <strong>Enter</strong> to preview</div>
         
-        <!-- Controls Display -->
-        <div id="controls">
-            <div class="control-item"><strong>Enter:</strong> Preview File</div>
-            <div class="control-item"><strong>Esc:</strong> Close Preview</div>
-            <div class="control-item"><strong>L:</strong> Light Panel</div>
-            <div class="control-item"><strong>M:</strong> Multi-Frog</div>
+        <!-- Controls Display - Bottom Center -->
+        <div id="controls-panel">
+            <button id="controls-toggle">Controls ▲</button>
+            <div id="controls-content">
+                <div class="controls-row">
+                    <span class="control-key">WASD</span> Move
+                    <span class="control-key">↑↓</span> Up/Down
+                </div>
+                <div class="controls-row">
+                    <span class="control-key">R</span> Re-align Camera
+                    <span class="control-key">Enter</span> Interact
+                </div>
+                <div class="controls-row">
+                    <span class="control-key">Space</span> Dash
+                    <span class="control-key">Esc</span> Close
+                </div>
+            </div>
         </div>
 
         <!-- Container for dynamically created preview windows -->
@@ -122,11 +133,58 @@
             </div>
 
             <div class="panel-section">
+                <h4>Floor</h4>
+                <div class="slider-row">
+                    <label>Color</label>
+                    <input type="color" id="floor-color" value="#d4af8c">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h4>Decorations</h4>
+                <div class="slider-row">
+                    <label>Rock Y</label>
+                    <input type="range" id="rock-y-offset" min="-10" max="10" step="0.5" value="0.5">
+                    <span class="value-display" id="rock-y-offset-val">0.5</span>
+                </div>
+                <div class="slider-row">
+                    <label>Seaweed Y</label>
+                    <input type="range" id="seaweed-y-offset" min="-10" max="10" step="0.5" value="0">
+                    <span class="value-display" id="seaweed-y-offset-val">0</span>
+                </div>
+                <div class="slider-row">
+                    <label>Starfish Y</label>
+                    <input type="range" id="starfish-y-offset" min="-10" max="10" step="0.5" value="0">
+                    <span class="value-display" id="starfish-y-offset-val">0</span>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h4>PDF Model Rotation</h4>
+                <div class="slider-row">
+                    <label>Rot X</label>
+                    <input type="range" id="pdf-rot-x" min="-180" max="180" step="15" value="90">
+                    <span class="value-display" id="pdf-rot-x-val">90</span>
+                </div>
+                <div class="slider-row">
+                    <label>Rot Y</label>
+                    <input type="range" id="pdf-rot-y" min="-180" max="180" step="15" value="0">
+                    <span class="value-display" id="pdf-rot-y-val">0</span>
+                </div>
+                <div class="slider-row">
+                    <label>Rot Z</label>
+                    <input type="range" id="pdf-rot-z" min="-180" max="180" step="15" value="0">
+                    <span class="value-display" id="pdf-rot-z-val">0</span>
+                </div>
+                <p class="panel-note">Rotation in degrees. Refresh to apply to all PDFs.</p>
+            </div>
+
+            <div class="panel-section">
                 <h4>Tank Dimensions</h4>
                 <div class="slider-row">
                     <label>Width</label>
-                    <input type="range" id="tank-width" min="10" max="150" step="5" value="50">
-                    <span class="value-display" id="tank-width-val">50</span>
+                    <input type="range" id="tank-width" min="10" max="150" step="5" value="30">
+                    <span class="value-display" id="tank-width-val">30</span>
                 </div>
                 <div class="slider-row">
                     <label>Height</label>
@@ -179,6 +237,6 @@
     </script>
     
     <!-- Scripts -->
-    <script type="module" src="swimming-tank.js"></script>
+    <script type="module" src="src/main.js"></script>
 </body>
 </html>
