@@ -13,7 +13,7 @@
 <body>
     <!-- Loading Screen -->
     <div id="loading">
-        <canvas id="loading-canvas"></canvas>
+        <div id="loading-text">initializing froggy.os</div>
     </div>
 
     <!-- Main Container -->
@@ -228,80 +228,18 @@
         </div>
     </div>
 
-    <!-- Loading animation script with 3D frog -->
-    <script type="module">
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+    <!-- Loading animation script -->
+    <script>
+    (function() {
+        const loadingText = document.getElementById('loading-text');
+        const baseText = 'initializing froggy.os';
+        let dots = 0;
 
-    const canvas = document.getElementById('loading-canvas');
-    const loadingDiv = document.getElementById('loading');
-
-    // Setup renderer
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x001122);
-
-    // Setup scene
-    const scene = new THREE.Scene();
-
-    // Setup camera
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0, 5);
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0x88ccff, 1.5);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
-    directionalLight.position.set(5, 10, 7);
-    scene.add(directionalLight);
-
-    // Load frog model
-    let frogModel = null;
-    const loader = new GLTFLoader();
-    loader.load('./models/Frog_Swim.gltf', (gltf) => {
-        frogModel = gltf.scene;
-
-        // Center and scale the model
-        const box = new THREE.Box3().setFromObject(frogModel);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 2 / maxDim;
-
-        frogModel.scale.setScalar(scale);
-        frogModel.position.sub(center.multiplyScalar(scale));
-
-        scene.add(frogModel);
-    });
-
-    // Handle resize
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    // Animation loop
-    function animate() {
-        if (loadingDiv.classList.contains('hidden')) {
-            renderer.dispose();
-            return;
-        }
-
-        if (frogModel) {
-            frogModel.rotation.y += 0.02;
-        }
-
-        renderer.render(scene, camera);
-        requestAnimationFrame(animate);
-    }
-    animate();
-
-    // Expose stop function for main.js
-    window.stopLoadingAnimation = () => {
-        renderer.dispose();
-    };
+        setInterval(() => {
+            dots = (dots + 1) % 4;
+            loadingText.textContent = baseText + '.'.repeat(dots);
+        }, 400);
+    })();
     </script>
 
     <!-- Import map to resolve "three" package via CDN -->
